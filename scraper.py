@@ -6,6 +6,7 @@ import re
 import geocoder
 import pprint
 import json
+import argparse
 
 
 INSPECTION_DOMAIN = 'http://info.kingcounty.gov'
@@ -166,11 +167,32 @@ def get_geojson(result):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('arg1', choices=[
+        'averagescore',
+        'highscore',
+        'mostinspections']
+    )
+    parser.add_argument('arg2', type=int)
+    parser.add_argument('arg3', nargs='?', choices=['reversed', ''], default='')
+    args = parser.parse_args()
+
     test = len(sys.argv) > 1 and sys.argv[1] == 'test'
     total_result = {'type': 'FeatureCollection', 'features': []}
     for result in generate_results(test):
         geo_result = get_geojson(result)
-        pprint.pprint(geo_result)
         total_result['features'].append(geo_result)
+    sort_by = {
+        'averagescore': 'Average Score',
+        'highscore': 'High Score',
+        'mostinspections': 'Total Inspections'
+    }
+    total_result['features'].sort(
+        key=lambda x: x['properties'][sort_by[args.arg1]],
+        reverse=not bool(args.arg3)
+    )
+    total_result['features'] = total_result['features'][:args.arg2]
+    for i in total_result['features']:
+        pprint.pprint(i)
     with open('my_map.json', 'w') as fh:
         json.dump(total_result, fh)
